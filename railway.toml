@@ -1,0 +1,14 @@
+# Railway project configuration
+
+[build]
+builder = "NIXPACKS"
+
+# Servei de backend (FastAPI)
+[services.backend]
+start = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+env = ["PYTHONUNBUFFERED=1"]
+
+# Servei de frontend (fitxers estàtics)
+[services.frontend]
+start = "python -m http.server $PORT"
+root = "frontend"
