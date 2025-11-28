@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 face_recognition
+face-recognition-models
 requests
 pillow
 numpy

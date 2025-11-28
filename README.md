@@ -100,7 +100,3 @@ actor-recognition-app/
 
 ## 👨‍💻 Autor
 Projecte creat per Jordi, com a MVP per explorar aplicacions culturals basades en reconeixement facial.
-
-```
-
-
