@@ -1,6 +1,5 @@
 ## 📄 README.md
 
-```markdown
 # 🎬 Actor Recognition App (MVP)
 
 Aplicació web que permet identificar actors a partir d’una captura amb la càmera del dispositiu.  
