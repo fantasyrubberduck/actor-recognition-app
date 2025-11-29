@@ -36,7 +36,7 @@ Aquest document explica com instal·lar i executar el projecte pas a pas.
    ```
 
 4. Comprovar que el backend funciona
-   - Obre el navegador a [httplocalhost8000docs](httplocalhost8000docs)
+   - Obre el navegador a [http://localhost:8000/docs](http://localhost:8000/docs)
    - Veureu la documentació interactiva de l’API (Swagger UI).
 
 ---
