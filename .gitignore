@@ -1,36 +1,43 @@
-# Entorn virtual
-venv/
-ENV/
+# Entorn i configuració
+.env
+*.env
 
-# Fitxers temporals de Python
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Fitxers de logs
+*.pdb
+*.egg-info/
+*.egg
 *.log
 
-# Fitxers de configuració locals
-*.env
-.env.*
+# Virtualenv
+.venv/
+venv/
+ENV/
 
-# Fitxers temporals del sistema
+# Docker
+postgres_data/
+docker-entrypoint-initdb.d/*.sql~
+
+# IDEs i editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Tests i cobertura
+.coverage
+htmlcov/
+.cache/
+pytest_cache/
+
+# Fitxers temporals
+*.tmp
+*.bak
+*.old
+
+# MacOS / Linux / Windows
 .DS_Store
 Thumbs.db
-
-# Fitxers de compilació
-*.so
-*.dll
-*.exe
-
-# Fitxers de Zone Identifier
-*:Zone.Identifier
-
-# Dataset local (imatges d’actors per entrenament)
-backend/data/*.jpg
-backend/data/*.png
-
-# Carpeta de proves
-tests/tmp/
-

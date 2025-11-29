@@ -1,102 +1,125 @@
-## 📄 README.md
+# Actor Recognition App 🎭
 
-# 🎬 Actor Recognition App (MVP)
+![CI + Docker](https://github.com/fantasyrubberduck/actor-recognition-app/actions/workflows/ci.yml/badge.svg)
 
-Aplicació web que permet identificar actors a partir d’una captura amb la càmera del dispositiu.  
-Funciona com un “Shazam per actors”: captura → backend → identificació → informació cultural.
-
----
-
-## 🚀 Funcionalitats actuals (MVP)
-- Captura d’imatges amb la càmera (frontend web).
-- Enviament al backend via API REST (FastAPI).
-- Reconeixement facial amb dataset local (OpenCV/face_recognition).
-- Resposta amb nom de l’actor o “Desconegut”.
-- Interfície minimalista amb vídeo i botó de captura.
+Aplicació backend amb **FastAPI** i **PostgreSQL + pgvector** per identificar actors a partir d’imatges facials.  
+Inclou integració amb **TMDb API** per enriquir els resultats amb biografia i imatge oficial.
 
 ---
 
-## 🏗️ Arquitectura
-- **Frontend**: HTML + CSS + JavaScript (PWA minimalista).
-- **Backend**: Python + FastAPI.
-- **Base de dades**: Dataset local amb imatges d’actors.
-- **API externa**: TMDb (per informació cultural, en fases posteriors).
+## 🚀 Requisits
 
----
-
-## ⚙️ Instal·lació
-
-### 1. Clonar repositori
-```bash
-git clone git@github.com:usuari/actor-recognition-app.git
-cd actor-recognition-app
-```
-
-### 2. Configurar backend
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate   # Linux/Mac
-venv\Scripts\activate      # Windows
-pip install -r requirements.txt
-```
-
-### 3. Llançar servidor
-```bash
-uvicorn main:app --reload
-```
-
-El backend estarà disponible a:  
-👉 `http://localhost:8000`
-
-### 4. Llançar frontend
-```bash
-cd frontend
-python -m http.server 5500
-```
-
-Obre al navegador:  
-👉 `http://localhost:5500/index.html`
-
----
-
-## 🔒 Configuració CORS
-El backend inclou middleware CORS per permetre connexions des del frontend.  
-Si vols restringir orígens, edita `main.py`:
-
-```python
-allow_origins=["http://localhost:5500"]
-```
+- Docker i Docker Compose instal·lats
+- Clau d’API de [TMDb](https://www.themoviedb.org/documentation/api)
 
 ---
 
 ## 📂 Estructura del projecte
+
 ```
 actor-recognition-app/
 │
 ├── backend/
-│   ├── main.py
-│   ├── requirements.txt
-│   └── data/            # Dataset d’imatges d’actors
-│
-├── frontend/
-│   ├── index.html
-│   ├── script.js
-│   └── style.css
-│
-└── README.md
+│   ├── main.py              # Backend FastAPI
+│   ├── requirements.txt     # Dependències Python
+│   └── seeder.py            # Script per generar embeddings inicials
+├── docker-entrypoint-initdb.d/
+│   ├── init.sql             # Creació de taules + extensió pgvector
+│   └── seeder.sql           # Inserció inicial d’actors (Penélope Cruz, Javier Bardem)
+├── Dockerfile               # Imatge backend
+├── docker-compose.yml       # Orquestració backend + BD
+└── .env                     # Variables d’entorn
 ```
 
 ---
 
-## 🧭 Roadmap
-- [ ] Integració amb TMDb per mostrar filmografia.  
-- [ ] Mode quiz i gamificació.  
-- [ ] Cache local per actors més consultats.  
-- [ ] Suport multillenguatge (Català, Castellà, Anglès).  
-- [ ] Mode offline amb PWA.  
+## ⚙️ Configuració `.env`
+
+Crea un fitxer `.env` amb les credencials:
+
+```env
+DB_NAME=actorsdb
+DB_USER=postgres
+DB_PASSWORD=supersecret
+DB_HOST=db
+DB_PORT=5432
+
+TMDB_API_KEY=xxxxxxxxxxxxxxxx
+```
+
+> ⚠️ No oblidis afegir `.env` al `.gitignore`.
 
 ---
 
-## 👨‍💻 Autor
-Projecte creat per Jordi, com a MVP per explorar aplicacions culturals basades en reconeixement facial.
+## 🐳 Desplegament amb Docker Compose
+
+```bash
+docker-compose up --build
+```
+
+- **db**: PostgreSQL amb pgvector (`ankane/pgvector:latest`)
+- **backend**: FastAPI al port `8000`
+
+---
+
+## 📥 Inicialització automàtica
+
+Quan el contenidor de PostgreSQL s’inicia per primera vegada:
+- Executa `init.sql` → crea taules i indexos vectorials
+- Executa `seeder.sql` → insereix Penélope Cruz i Javier Bardem
+
+Després pots executar el seeder Python per generar embeddings:
+
+```bash
+docker-compose exec backend python seeder.py
+```
+
+---
+
+## 🔑 Endpoints principals
+
+- **POST `/identify`** → identifica actor a partir d’una imatge (base64)  
+- **POST `/actors`** → crea un actor nou (amb opcional `image_url` per generar embedding)  
+- **POST `/actors/{actor_id}/add_embedding`** → afegeix embeddings nous des d’una URL  
+- **GET `/actors`** → llista tots els actors registrats  
+- **GET `/actors/{actor_id}`** → detalls d’un actor concret (incloent embeddings)  
+
+---
+
+## 🎯 Exemple de crida
+
+```bash
+curl -X POST http://localhost:8000/identify \
+  -H "Content-Type: application/json" \
+  -d '{"image": "data:image/jpeg;base64,/9j/4AAQSk..."}'
+```
+
+Resposta esperada:
+```json
+{
+  "actor_name": "Penélope Cruz",
+  "confidence": 0.82,
+  "tmdb_id": 194,
+  "details": {
+    "name": "Penélope Cruz",
+    "biography": "...",
+    "image_url": "https://image.tmdb.org/t/p/w500/xxxx.jpg"
+  }
+}
+```
+
+---
+
+## 📌 Notes
+
+- Les imatges originals **no es guarden** a la BD, només els embeddings i la URL de la font.  
+- Fonts recomanades: **Wikimedia Commons** (llicència lliure) o **TMDb API**.  
+- Ajusta el llindar de similitud (`THRESHOLD`) segons els teus tests.  
+
+---
+
+## 🧩 Properes millores
+
+- Endpoint per eliminar actors/embeddings  
+- Autenticació JWT per protegir l’API  
+- Frontend senzill per provar identificacions

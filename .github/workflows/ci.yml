@@ -1,0 +1,57 @@
+name: CI + Docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_DB: actorsdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: supersecret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d actorsdb"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+
+      - name: Run DB init scripts
+        run: |
+          PGPASSWORD=supersecret psql -h localhost -U postgres -d actorsdb -f docker-entrypoint-initdb.d/init.sql
+          PGPASSWORD=supersecret psql -h localhost -U postgres -d actorsdb -f docker-entrypoint-initdb.d/seeder.sql
+
+      - name: Build Docker image
+        run: docker build -t actor-recognition-backend ./backend
+
+      - name: Start backend
+        run: |
+          uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+
+      - name: Run test script
+        run: |
+          chmod +x test.sh
+          ./test.sh
