@@ -16,8 +16,8 @@ Aquest document explica com instal·lar i executar el projecte pas a pas.
 
 1. Clonar el repositori
    ```bash
-   git clone httpsgithub.comusuarirepositori.git
-   cd repositori
+   git clone https://github.com/fantasyrubberduck/actor-recognition-app.git
+   cd actor-recognition-app
    ```
 
 2. Configurar variables d'entorn
