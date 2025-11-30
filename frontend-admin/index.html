@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <title>Cerca Actors</title>
+</head>
+<body>
+  <h1>Cerca Actors</h1>
+  <input type="text" id="actorName" placeholder="Nom de l'actor">
+  <button onclick="searchActor()">Cerca</button>
+
+  <div id="result"></div>
+
+  <script>
+    let lastActor = null;
+
+    async function searchActor() {
+      const name = document.getElementById("actorName").value;
+      const res = await fetch(`http://localhost:8000/search_actor?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      const div = document.getElementById("result");
+
+      if (data.detail) {
+        div.innerHTML = `<p style="color:red">${data.detail}</p>`;
+        lastActor = null;
+      } else {
+        lastActor = data;
+        div.innerHTML = `
+          <h3>${data.name}</h3>
+          ${data.profile_image ? `<img src="${data.profile_image}" />` : "<p>Sense imatge</p>"}
+          <br>
+          <button onclick="addEmbedding()">Afegir embedding</button>
+        `;
+      }
+    }
+
+    async function addEmbedding() {
+      if (!lastActor || !lastActor.profile_image) {
+        alert("No hi ha actor ni imatge disponibles.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("name", lastActor.name);
+      formData.append("image_url", lastActor.profile_image);
+
+      const res = await fetch("http://localhost:8000/add_actor_with_embedding", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      alert(data.message);
+    }
+  </script>
+</body>
+</html>

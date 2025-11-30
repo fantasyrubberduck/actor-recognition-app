@@ -1,8 +1,9 @@
 import io
 import os
+import httpx
 from typing import List, Optional
 
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,6 +16,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 from pgvector.sqlalchemy import Vector
+
+import tempfile
 
 # -----------------------------------------------------------------------------
 # Configuració
@@ -135,9 +138,9 @@ def read_image_from_upload(file: UploadFile) -> Image.Image:
         raise HTTPException(status_code=400, detail=f"Error obrint la imatge: {str(e)}")
 
 
-async def image_to_embedding(file: UploadFile) -> List[float]:
-    # Llegim bytes des d’UploadFile de forma segura
-    image_bytes = await file.read()
+async def image_to_embedding(image_bytes: bytes) -> list[float]:
+    # Rep bytes d'una imatge i retorna l'embedding facial.
+
     if not image_bytes or len(image_bytes) == 0:
         raise HTTPException(status_code=400, detail="Fitxer d’imatge buit o no vàlid")
 
@@ -157,6 +160,15 @@ async def image_to_embedding(file: UploadFile) -> List[float]:
 
     # Agafem el primer rostre detectat
     return encodings[0].tolist()
+
+
+async def file_image_to_embedding(file: UploadFile) -> List[float]:
+    # Llegim bytes des d’UploadFile de forma segura
+    image_bytes = await file.read()
+    if not image_bytes or len(image_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Fitxer d’imatge buit o no vàlid")
+    
+    return await image_to_embedding(image_bytes)
 
 
 def distance_to_confidence(distance: float) -> float:
@@ -217,7 +229,7 @@ async def add_embedding(actor_id: int, file: UploadFile, db: Session = Depends(g
     if not actor:
         raise HTTPException(status_code=404, detail="Actor no trobat")
 
-    embedding_vec = await image_to_embedding(file)
+    embedding_vec = await file_image_to_embedding(file)
 
     try:
         emb = Embedding(actor_id=actor.id, vector=embedding_vec)
@@ -237,7 +249,7 @@ async def identify(file: UploadFile, db: Session = Depends(get_db)) -> dict:
         raise HTTPException(status_code=400, detail="Només s’accepten fitxers d’imatge")
 
     # Convertir la imatge a embedding facial (128 dims)
-    embedding_vec = await image_to_embedding(file)
+    embedding_vec = await file_image_to_embedding(file)
 
     try:
         # Cerca del veí més proper per L2 (pgvector)
@@ -281,3 +293,104 @@ async def identify(file: UploadFile, db: Session = Depends(get_db)) -> dict:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error consultant BD: {str(e)}")
+
+# Llegim la API key de TMDB des de les variables d’entorn
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+if not TMDB_API_KEY:
+    raise RuntimeError("TMDB_API_KEY no definida a les variables d'entorn")
+
+@app.get("/search_actor")
+async def search_actor(name: str):
+    try:
+        async with httpx.AsyncClient() as client:
+            # Buscar actor per nom
+            search_url = "https://api.themoviedb.org/3/search/person"
+            search_params = {"api_key": TMDB_API_KEY, "query": name}
+            search_res = await client.get(search_url, params=search_params)
+            search_data = search_res.json()
+
+            if not search_data.get("results"):
+                return JSONResponse(status_code=404, content={"detail": "Actor no trobat"})
+
+            actor = search_data["results"][0]
+
+            # Obtenir detalls per l’imdb_id
+            details_url = f"https://api.themoviedb.org/3/person/{actor['id']}"
+            details_params = {"api_key": TMDB_API_KEY}
+            details_res = await client.get(details_url, params=details_params)
+            details_data = details_res.json()
+
+            return {
+                "id": actor["id"],
+                "name": actor["name"],
+                "tmdb_id": actor["id"],
+                "imdb_id": details_data.get("imdb_id"),
+                "profile_image": f"https://image.tmdb.org/t/p/w200{actor['profile_path']}" if actor.get("profile_path") else None
+            }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": f"Error consultant TMDB: {str(e)}"})
+
+@app.post("/add_actor_with_embedding")
+async def add_actor_with_embedding(
+    name: str = Form(...),
+    image_url: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    # 1. Cercar actor a TMDB
+    try:
+        async with httpx.AsyncClient() as client:
+            search_url = "https://api.themoviedb.org/3/search/person"
+            search_params = {"api_key": TMDB_API_KEY, "query": name}
+            search_res = await client.get(search_url, params=search_params)
+            search_data = search_res.json()
+
+            if not search_data.get("results"):
+                raise HTTPException(status_code=404, detail="Actor no trobat a TMDB")
+
+            actor_tmdb = search_data["results"][0]
+
+            # Detalls per obtenir imdb_id
+            details_url = f"https://api.themoviedb.org/3/person/{actor_tmdb['id']}"
+            details_params = {"api_key": TMDB_API_KEY}
+            details_res = await client.get(details_url, params=details_params)
+            details_data = details_res.json()
+
+            tmdb_id = actor_tmdb["id"]
+            imdb_id = details_data.get("imdb_id")
+            actor_name = actor_tmdb["name"]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error consultant TMDB: {str(e)}")
+
+    # 2. Comprovar si l’actor ja existeix
+    actor = db.query(Actor).filter(Actor.tmdb_id == tmdb_id).first()
+    if not actor:
+        actor = Actor(name=actor_name, tmdb_id=tmdb_id, imdb_id=imdb_id)
+        db.add(actor)
+        db.commit()
+        db.refresh(actor)
+        
+    # 3. Generar embedding
+
+    # Descarreguem la imatge al backend
+    async with httpx.AsyncClient() as client:
+        res = await client.get(image_url)
+        if res.status_code != 200:
+            raise HTTPException(status_code=400, detail="No s'ha pogut descarregar la imatge")
+            
+        embedding_vec = await image_to_embedding(res.content)
+
+    # 4. Desa embedding
+    try:
+        emb = Embedding(actor_id=actor.id, vector=embedding_vec)
+        db.add(emb)
+        db.commit()
+        db.refresh(emb)
+        return {
+            "message": "Actor i embedding afegits correctament",
+            "actor": {"id": actor.id, "name": actor.name, "tmdb_id": actor.tmdb_id, "imdb_id": actor.imdb_id},
+            "embedding_id": emb.id
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error guardant embedding: {str(e)}")

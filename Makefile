@@ -36,7 +36,7 @@ shell-db:
 reset-db:
 	$(COMPOSE) down -v
 	$(COMPOSE) up --build -d
-	
+
 # Mostra les taules existents a la BD
 psql-tables:
 	$(COMPOSE) exec db psql -U postgres -d actorsdb -c "\dt"
