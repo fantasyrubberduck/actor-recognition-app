@@ -1,4 +1,4 @@
-#!/sbin/bash
+#!/bin/sh
 
 # Script de test ràpid per comprovar el backend
 
