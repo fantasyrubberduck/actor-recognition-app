@@ -40,8 +40,8 @@ jobs:
 
       - name: Run DB init scripts
         run: |
-          PGPASSWORD=supersecret psql -h localhost -U postgres -d actorsdb -f docker-entrypoint-initdb.d/init.sql
-          PGPASSWORD=supersecret psql -h localhost -U postgres -d actorsdb -f docker-entrypoint-initdb.d/seeder.sql
+          PGPASSWORD=supersecret psql -h localhost -U postgres -d actorsdb -f backend/sql/init.sql
+          PGPASSWORD=supersecret psql -h localhost -U postgres -d actorsdb -f backend/sql/seeder.sql
 
       - name: Build Docker image
         run: docker build -t actor-recognition-backend ./backend
