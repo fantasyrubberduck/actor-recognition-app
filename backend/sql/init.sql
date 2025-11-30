@@ -1,3 +1,8 @@
+SELECT 'CREATE DATABASE actorsdb'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'actorsdb')\gexec
+
+\c actorsdb
+
 -- Activar l’extensió pgvector
 CREATE EXTENSION IF NOT EXISTS vector;
 

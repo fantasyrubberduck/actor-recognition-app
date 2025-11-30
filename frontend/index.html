@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Actor Identifier MVP</title>
+  <title>Actor Recognition</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <video id="video" autoplay playsinline></video>
-  <button id="capture">Captura</button>
+<div>
+  <video id="video" autoplay></video>
   <canvas id="canvas" style="display:none;"></canvas>
+  <button id="capture">Captura</button>
+  <div id="spinner" style="display:none;">⏳ Processant...</div>
+  <div id="message" class="message" style="display:none;"></div>
+</div>
   <script src="script.js"></script>
 </body>
 </html>

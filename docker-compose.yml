@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg16
     container_name: actors-db
     restart: always
     env_file: .env
@@ -14,9 +14,10 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
+      - ./backend/sql:/docker-entrypoint-initdb.d
+      
   backend:
-    build: .
+    build: ./backend/
     container_name: actors-backend
     restart: always
     env_file: .env
@@ -25,6 +26,8 @@ services:
     ports:
       - "8000:8000"
     command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./backend/app:/app
 
 volumes:
   postgres_data:

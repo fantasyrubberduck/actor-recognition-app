@@ -19,7 +19,7 @@ ENV/
 
 # Docker
 postgres_data/
-docker-entrypoint-initdb.d/*.sql~
+*.sql~
 
 # IDEs i editors
 .vscode/
@@ -41,3 +41,8 @@ pytest_cache/
 # MacOS / Linux / Windows
 .DS_Store
 Thumbs.db
+
+# Fitxers d'imatges
+*.png
+*.jpg
+*.jpeg

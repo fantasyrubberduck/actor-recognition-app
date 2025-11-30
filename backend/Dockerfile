@@ -1,7 +1,7 @@
-# Imatge base lleugera amb Python
+# Imatge base amb Python
 FROM python:3.11-slim
 
-# Instal·lar dependències del sistema necessàries per a dlib i face-recognition
+# Instal·lar dependències de sistema necessàries per a dlib/face-recognition
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -12,15 +12,15 @@ RUN apt-get update && apt-get install -y \
     libboost-all-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Directori de treball
+# Crear directori de treball
 WORKDIR /app
 
-# Copiar requirements i instal·lar dependències Python
-COPY backend/requirements.txt .
+# Copiar requirements i instal·lar dependències
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el codi del backend
-COPY backend/ .
+COPY app/ .
 
 # Exposar port
 EXPOSE 8000

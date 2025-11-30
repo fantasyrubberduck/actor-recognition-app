@@ -50,7 +50,7 @@ Aquest document explica com instal·lar i executar el projecte pas a pas.
 
 2. Executa el test
    ```bash
-   .test.sh
+   ./test.sh
    ```
 
 3. Si tot funciona, veuràs una resposta amb la llista d’actors inicials.
